@@ -18,7 +18,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
-from utils import pre_process_mnist, pre_process_multimnist, pre_process_smallnorb
+from utils import pre_process_mnist, pre_process_multimnist, pre_process_smallnorb, pre_process_custom
 import json
 
 
@@ -74,6 +74,10 @@ class Dataset(object):
             self.X_test, self.y_test = pre_process_mnist.pre_process(self.X_test, self.y_test)
             self.class_names = list(range(10))
             print("[INFO] Dataset loaded!")
+        elif self.model_name == 'custom':
+            (self.X_train, self.y_train), (self.X_test, self.y_test) = pre_process_custom.dataload(target_names=['infested,'healthy'], data_dir=self.config['custom_path'])
+            (self.X_train, self.y_train)=pre_process_custom.datagen_mfcc(self.X_train,self.y_train, batch_size=16, target_names=['infested','healthy'])
+            self.class_names=['infested','healthy']
         elif self.model_name == 'SMALLNORB':
                     # import the datatset
             (ds_train, ds_test), ds_info = tfds.load(
@@ -106,6 +110,8 @@ class Dataset(object):
     def get_tf_data(self):
         if self.model_name == 'MNIST':
             dataset_train, dataset_test = pre_process_mnist.generate_tf_data(self.X_train, self.y_train, self.X_test, self.y_test, self.config['batch_size'])
+        elif self.model_name == 'custom':
+            dataset_train, dataset_test = pre_process_custom.generate_tf_data(self.X_train,self.y_train,self.X_test,self.y_test,self.config['batch_size'])
         elif self.model_name == 'SMALLNORB':
             dataset_train, dataset_test = pre_process_smallnorb.generate_tf_data(self.X_train, self.y_train, self.X_test_patch, self.y_test, self.config['batch_size'])
         elif self.model_name == 'MULTIMNIST':
