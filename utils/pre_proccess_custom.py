@@ -12,56 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import os
 import numpy as np
 import tensorflow as tf
-import os
 import cv2
 import librosa
-tf2 = tf.compat.v2
-import numpy as np
-#from numpy import
-import os
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import random
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-# Rest of your code remains unchanged
-import os
-import numpy as np
-seed = 2018
-np.random.seed(seed)
-import random
-
-import librosa
-from scipy import signal
-
-import pandas as pd
-
-from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
-
-from keras.layers import Input
-from keras.layers import BatchNormalization
-from keras.layers import Concatenate
-from keras.layers import Activation
-from keras.layers import Dense
-from tensorflow.keras.applications.resnet50 import ResNet50
-
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-
+from scipy import signal  # Corrected import for signal
 from keras import Model
-
 from keras.utils import to_categorical
-
-# Use keras.layers instead of keras.layers.merge
-from keras.layers import Concatenate
-
-from keras.applications.densenet import DenseNet121
-
 from skimage.transform import resize
-import matplotlib.pyplot as plt
+
+# TensorFlow 2.x compatibility
+tf2 = tf.compat.v2
 
 # constants
 MNIST_IMG_SIZE = 28
