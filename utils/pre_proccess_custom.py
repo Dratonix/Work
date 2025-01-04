@@ -27,62 +27,67 @@ PARALLEL_INPUT_CALLS = 16
 
 # normalize dataset
 def pre_process(image, label):
-    return (image / 256)[...,None].astype('float32'), tf.keras.utils.to_categorical(label, num_classes=2)
-def dataload(target_names, data_dir):
+    return (image / 256)[..., None].astype('float32'), tf.keras.utils.to_categorical(label, num_classes=2)
 
-  for i, target in enumerate(target_names):
-      target_count.append(0)
-      path = data_dir + target + '/'  # path to each target directory
-      
-      # Walk through the directory and its subdirectories
-      for root, dirs, files in os.walk(path):
-          for filename in files:
-              name, ext = os.path.splitext(filename)
-              if ext.lower() == '.wav':  # Ensure case-insensitive check for .wav files
-                  # Stop if we have reached the maximum number of samples
-                  if j >= MAX_SAMPLES:
-                      print(f"Reached maximum sample limit: {MAX_SAMPLES} samples.")
-                      break
-                  
-                  name = os.path.join(root, filename)
-                  y.append(i)
-                  X_names.append(name)
-                  target_count[i] += 1
-                  j += 1
-          
-          # Break the outer loop if max samples are reached
-          if j >= MAX_SAMPLES:
-              break
-      
-      print(f'{target} #recs = {target_count[i]}')
-  
+def dataload(target_names, data_dir):
+    target_count = []
+    X_names = []
+    y = []
+    MAX_SAMPLES = 10000
+    j = 0
+
+    for i, target in enumerate(target_names):
+        target_count.append(0)
+        path = data_dir + target + '/'  # path to each target directory
+
+        # Walk through the directory and its subdirectories
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                name, ext = os.path.splitext(filename)
+                if ext.lower() == '.wav':  # Ensure case-insensitive check for .wav files
+                    # Stop if we have reached the maximum number of samples
+                    if j >= MAX_SAMPLES:
+                        print(f"Reached maximum sample limit: {MAX_SAMPLES} samples.")
+                        break
+
+                    name = os.path.join(root, filename)
+                    y.append(i)
+                    X_names.append(name)
+                    target_count[i] += 1
+                    j += 1
+
+            # Break the outer loop if max samples are reached
+            if j >= MAX_SAMPLES:
+                break
+
+        print(f'{target} #recs = {target_count[i]}')
+
     # Print total number of records collected
-      print(f'total #recs = {len(y)}')
-      
-      # Shuffle the data before splitting
-      X_names, y = shuffle(X_names, y, random_state=42)
-      
-      # Split the data into training and testing sets
-      X_train, X_test, y_train, y_test = train_test_split(X_names, y, stratify=y, test_size=0.20, random_state=42)
-      
-      # Print the number of records in the train and test sets
-      print(f'train #recs = {len(X_train)}')
-      print(f'test #recs = {len(X_test)}')
+    print(f'total #recs = {len(y)}')
+
+    # Shuffle the data before splitting
+    X_names, y = shuffle(X_names, y, random_state=42)
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X_names, y, stratify=y, test_size=0.20, random_state=42)
+
+    # Print the number of records in the train and test sets
+    print(f'train #recs = {len(X_train)}')
+    print(f'test #recs = {len(X_test)}')
 
 def generator(image, label):
     return (image, label), (label, image)
 
 def generate_tf_data(X_train, y_train, X_test, y_test, batch_size):
-	dataset_train = datagen_mfcc(X_train,y_train,batch_size=16)
-  dataset_test=datagen_mfcc(X_test,y_test,batch_size=16)
+    dataset_train = datagen_mfcc(X_train, y_train, batch_size=16)
+    dataset_test = datagen_mfcc(X_test, y_test, batch_size=16)
     
-	return dataset_train, dataset_test
-
+    return dataset_train, dataset_test
 
 def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28, duration=28):
     """
     Data generator for training models with MFCC features.
-    
+
     Args:
         X_train: List of file paths to audio files.
         y_train: List of labels corresponding to X_train.
@@ -91,7 +96,7 @@ def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28
         SR: Sampling rate for audio files.
         n_mfcc: Number of MFCC coefficients to compute.
         duration: Fixed duration (in seconds) for each audio clip.
-        
+
     Yields:
         A tuple (x_batch, y_batch, sample_weight) for training.
     """
@@ -152,8 +157,4 @@ def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28
             # One-hot encode labels
             y_batch = to_categorical(y_batch, num_classes=len(target_names))
             
-            # Convert sample weights to numpy array
-            sample_weight_batch = np.array(sample_weight_batch, dtype=np.float32)
-            
-            yield x_batch, y_batch, sample_weight_batch
-
+            # Convert sample weight
