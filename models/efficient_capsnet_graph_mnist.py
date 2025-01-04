@@ -19,54 +19,35 @@ from utils.layers import PrimaryCaps, FCCaps, Length, Mask
 
 import tensorflow as tf
 
+
 def efficient_capsnet_graph(input_shape):
+    
     inputs = tf.keras.Input(input_shape)
-    
-    # Conv layers
-    x = tf.keras.layers.Conv2D(32, 5, activation="relu", padding='valid', kernel_initializer='he_normal')(inputs)
+    #Conv layers
+    x = tf.keras.layers.Conv2D(32,5,activation="relu", padding='valid', kernel_initializer='he_normal')(inputs)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(64,3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(64,3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(128, 3, 2, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    
-    # LSTM Layers
-    x = tf.keras.layers.Reshape((-1, 128))(x)  # Flatten spatial dimensions
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)  # LSTM
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # Another LSTM
+    x = tf.keras.layers.Conv2D(128,3,2, activation='relu', padding='valid', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
 
-    # Now we need to reshape the output of the LSTM to pass it to PrimaryCaps
-    print("Shape before PrimaryCaps:", x.shape)  # Print shape for debugging
+    #LSTM Layers
+    x = tf.keras.layers.Reshape((-1, 128))(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)  # Bidirectional LSTM
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # Another LSTM layer
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Reshape((-1, 1))(x)  # Reshape to (batch_size, height, width, 1)
+    #Capsnet layers
+    x = PrimaryCaps(128, 9, 16, 8)(x)
     
-    # Reshaping to match the expected shape for PrimaryCaps
-    # We will treat the second axis as the height (timesteps) and reshape accordingly
-    # Suppose PrimaryCaps expects (batch_size, height, width, num_capsules, capsule_dim)
+    digit_caps = FCCaps(10,16)(x)
     
-    # Reshaping the output of LSTM into capsules shape
-    # Example: Let's assume you want 32 capsules, each of size 8
-    num_capsules = 32
-    capsule_dim = 8
-    
-    # Calculate the new height and width after LSTM processing
-    batch_size = tf.shape(x)[0]
-    timesteps = tf.shape(x)[1]  # This is the "height" of the capsules in the next layer
-    
-    # We assume we can split the LSTM output channels into the number of capsules you want
-    x = tf.reshape(x, [batch_size, timesteps, num_capsules, capsule_dim])
-    
-    print("Shape after reshaping for PrimaryCaps:", x.shape)
-    
-    # Pass into PrimaryCaps layer (if PrimaryCaps is a custom layer)
-    # x = PrimaryCaps(num_capsules=num_capsules, capsule_dim=capsule_dim)(x)
-    
-    return x  # You can return or continue processing through your Capsule layers
+    digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
 
-# Example usage:
-model = efficient_capsnet_graph((28, 28, 1))  # Input shape for MNIST-like data
+    return tf.keras.Model(inputs=inputs,outputs=[digit_caps, digit_caps_len], name='Efficient_CapsNet')
 
 
 def generator_graph(input_shape):
