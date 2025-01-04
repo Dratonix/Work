@@ -1,27 +1,6 @@
-# Copyright 2021 Vittorio Mazzia & Francesco Salvetti. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-
+import tensorflow as tf
 import numpy as np
-import tensorflow as tf
 from utils.layers import PrimaryCaps, FCCaps, Length, Mask
-
-import tensorflow as tf
-
-
-import tensorflow as tf
-import tensorflow as tf
 
 def efficient_capsnet_graph(input_shape):
     
@@ -37,17 +16,6 @@ def efficient_capsnet_graph(input_shape):
     x = tf.keras.layers.Conv2D(128, 3, 2, activation='relu', padding='same', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
 
-    # LSTM Layers
-    x = tf.keras.layers.Reshape((-1, 128))(x)  # Reshape to sequence format for LSTM
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    
-    # Ensure that we have proper spatial structure before capsule network
-    # Instead of reshaping to (-1, 1), we maintain some height and width.
-    x = tf.keras.layers.Reshape((-1, 6,6, 128))(x)  # Example reshape, adjust based on model specifics
-    
     # PrimaryCaps Layer (Ensure the Conv2D inside PrimaryCaps layer uses padding='same' and strides=1)
     x = PrimaryCaps(128, 9, 16, 8)(x)
     
@@ -57,8 +25,21 @@ def efficient_capsnet_graph(input_shape):
     # Length Layer
     digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
 
-    return tf.keras.Model(inputs=inputs, outputs=[digit_caps, digit_caps_len], name='Efficient_CapsNet')
-
+    # LSTM Layer After Capsule Network
+    # First, reshape the capsule output (digit_caps) to fit LSTM input
+    x = tf.keras.layers.Reshape((-1, 10 * 16))(digit_caps)  # Assuming each capsule vector has length 16, and there are 10 classes
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # LSTM Layer 1
+    x = tf.keras.layers.BatchNormalization()(x)
+    
+    # You can add additional LSTM layers if necessary
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=False))(x)  # LSTM Layer 2 (final)
+    x = tf.keras.layers.BatchNormalization()(x)
+    
+    # Optional: You can add a final dense layer for classification or other tasks
+    # Example: Classification Layer (if needed)
+    outputs = tf.keras.layers.Dense(10, activation='softmax')(x)  # For 10-class classification
+    
+    return tf.keras.Model(inputs=inputs, outputs=[digit_caps_len, outputs], name='Efficient_CapsNet_LSTM')
 
 def generator_graph(input_shape):
     """
