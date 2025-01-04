@@ -17,18 +17,10 @@ import numpy as np
 import tensorflow as tf
 from utils.layers import PrimaryCaps, FCCaps, Length, Mask
 
-
 def efficient_capsnet_graph(input_shape):
-    """
-    Efficient-CapsNet graph architecture.
-
-    Parameters
-    ----------   
-    input_shape: list
-        network input shape
-    """
-    inputs = tf.keras.Input(input_shape)
     
+    inputs = tf.keras.Input(input_shape)
+    #Conv layers
     x = tf.keras.layers.Conv2D(32,5,activation="relu", padding='valid', kernel_initializer='he_normal')(inputs)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Conv2D(64,3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
@@ -37,14 +29,19 @@ def efficient_capsnet_graph(input_shape):
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Conv2D(128,3,2, activation='relu', padding='valid', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
+
+    #LSTM Layers
+    x = tf.keras.layers.Reshape((-1, 128))(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)  # Bidirectional LSTM
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # Another LSTM layer
+    x = tf.keras.layers.BatchNormalization()(x)
+    #Capsnet layers
     x = PrimaryCaps(128, 9, 16, 8)(x)
     
     digit_caps = FCCaps(10,16)(x)
     
     digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
-
-    return tf.keras.Model(inputs=inputs,outputs=[digit_caps, digit_caps_len], name='Efficient_CapsNet')
-
 
 def generator_graph(input_shape):
     """
