@@ -21,42 +21,44 @@ import tensorflow as tf
 
 
 import tensorflow as tf
+import tensorflow as tf
 
 def efficient_capsnet_graph(input_shape):
-    inputs = tf.keras.Input(input_shape)
     
+    inputs = tf.keras.Input(input_shape)
+
     # Conv layers
-    x = tf.keras.layers.Conv2D(32, 5, activation="relu", padding='valid', kernel_initializer='he_normal')(inputs)
+    x = tf.keras.layers.Conv2D(32, 5, activation="relu", padding='same', kernel_initializer='he_normal')(inputs)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(128, 3, 2, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(128, 3, 2, activation='relu', padding='same', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
 
     # LSTM Layers
-    x = tf.keras.layers.Reshape((-1, 128))(x)  # Shape becomes (batch_size, sequence_length, 128)
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)  # Bidirectional LSTM
+    x = tf.keras.layers.Reshape((-1, 128))(x)  # Reshape to sequence format for LSTM
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # Another LSTM layer
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)
     x = tf.keras.layers.BatchNormalization()(x)
-
-    # Reshape to (batch_size, height, width, channels) for PrimaryCaps
-    # Ensure x has the correct shape (None, height, width, channels) for capsule layers
-    # You may need to reshape the tensor to match your specific design
-    x = tf.keras.layers.Reshape((-1, 1, 128))(x)  # Reshape to (batch_size, height, width, channels)
-
-    # PrimaryCaps Layer
+    
+    # Ensure that we have proper spatial structure before capsule network
+    # Instead of reshaping to (-1, 1), we maintain some height and width.
+    x = tf.keras.layers.Reshape((-1, 6,6, 128))(x)  # Example reshape, adjust based on model specifics
+    
+    # PrimaryCaps Layer (Ensure the Conv2D inside PrimaryCaps layer uses padding='same' and strides=1)
     x = PrimaryCaps(128, 9, 16, 8)(x)
-
-    # Fully Connected Caps Layer
+    
+    # Fully Connected Capsule Layer (FCCaps)
     digit_caps = FCCaps(10, 16)(x)
 
-    # Length Layer to get the length of the final digit capsules
+    # Length Layer
     digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
 
     return tf.keras.Model(inputs=inputs, outputs=[digit_caps, digit_caps_len], name='Efficient_CapsNet')
+
 
 def generator_graph(input_shape):
     """
