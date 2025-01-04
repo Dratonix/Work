@@ -138,6 +138,7 @@ class EfficientCapsNet(Model):
     """
     def __init__(self, model_name, mode='test', config_path='config.json', custom_path=None, verbose=True):
         Model.__init__(self, model_name, mode, config_path, verbose)
+        print("jfjfjfjfjfjfjf")
         if custom_path != None:
             self.model_path = custom_path
         else:
