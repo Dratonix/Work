@@ -75,7 +75,7 @@ class Dataset(object):
             self.class_names = list(range(10))
             print("[INFO] Dataset loaded!")
         elif self.model_name == 'custom':
-            (self.X_train, self.y_train), (self.X_test, self.y_test) = pre_process_custom.dataload(target_names=['infested,'healthy'], data_dir=self.config['custom_path'])
+            (self.X_train, self.y_train), (self.X_test, self.y_test) = pre_process_custom.dataload(target_names=['infested','healthy'], data_dir=self.config['custom_path'])
             (self.X_train, self.y_train)=pre_process_custom.datagen_mfcc(self.X_train,self.y_train, batch_size=16, target_names=['infested','healthy'])
             self.class_names=['infested','healthy']
         elif self.model_name == 'SMALLNORB':
