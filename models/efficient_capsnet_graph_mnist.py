@@ -1,38 +1,49 @@
-import tensorflow as tf
+# Copyright 2021 Vittorio Mazzia & Francesco Salvetti. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
 import numpy as np
+import tensorflow as tf
 from utils.layers import PrimaryCaps, FCCaps, Length, Mask
 
+
 def efficient_capsnet_graph(input_shape):
-    
+    """
+    Efficient-CapsNet graph architecture.
+
+    Parameters
+    ----------   
+    input_shape: list
+        network input shape
+    """
     inputs = tf.keras.Input(input_shape)
-
-    # Conv layers
-    x = tf.keras.layers.Conv2D(32, 5, activation="relu", padding='same', kernel_initializer='he_normal')(inputs)
+    
+    x = tf.keras.layers.Conv2D(32,5,activation="relu", padding='valid', kernel_initializer='he_normal')(inputs)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Conv2D(64,3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)   
+    x = tf.keras.layers.Conv2D(64,3, activation='relu', padding='valid', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Conv2D(128, 3, 2, activation='relu', padding='same', kernel_initializer='he_normal')(x)   
+    x = tf.keras.layers.Conv2D(128,3,2, activation='relu', padding='valid', kernel_initializer='he_normal')(x)   
     x = tf.keras.layers.BatchNormalization()(x)
-
-    # PrimaryCaps Layer (Ensure the Conv2D inside PrimaryCaps layer uses padding='same' and strides=1)
     x = PrimaryCaps(128, 9, 16, 8)(x)
     
-    # Fully Connected Capsule Layer (FCCaps)
-    digit_caps = FCCaps(10, 16)(x)
-
-    # Length Layer
-    x = tf.keras.layers.Reshape((-1, 16))(digit_caps)  # Reshape to (batch_size, time_steps, feature_dim)
+    digit_caps = FCCaps(10,16)(x)
     
-    # LSTM layer
-    x = tf.keras.layers.LSTM(64, return_sequences=False)(x)  # You can adjust the number of units (64 here)
-    
-    # Dense output layer for classification
-    x = tf.keras.layers.Dense(5, activation='softmax')(x)  # 5 classes (woodboring pests)
+    digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
 
-    return tf.keras.Model(inputs=inputs, outputs=x, name='Efficient_CapsNet_LSTM')
-
+    return tf.keras.Model(inputs=inputs,outputs=[digit_caps, digit_caps_len], name='Efficient_CapsNet')
 
 
 def generator_graph(input_shape):
