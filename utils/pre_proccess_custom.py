@@ -19,6 +19,49 @@ import os
 import cv2
 import librosa
 tf2 = tf.compat.v2
+import numpy as np
+#from numpy import
+import os
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+import random
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Rest of your code remains unchanged
+import os
+import numpy as np
+seed = 2018
+np.random.seed(seed)
+import random
+
+import librosa
+from scipy import signal
+
+import pandas as pd
+
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+
+from keras.layers import Input
+from keras.layers import BatchNormalization
+from keras.layers import Concatenate
+from keras.layers import Activation
+from keras.layers import Dense
+from tensorflow.keras.applications.resnet50 import ResNet50
+
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
+
+from keras import Model
+
+from keras.utils import to_categorical
+
+# Use keras.layers instead of keras.layers.merge
+from keras.layers import Concatenate
+
+from keras.applications.densenet import DenseNet121
+
+from skimage.transform import resize
+import matplotlib.pyplot as plt
 
 # constants
 MNIST_IMG_SIZE = 28
@@ -75,40 +118,21 @@ def dataload(target_names, data_dir):
     print(f'train #recs = {len(X_train)}')
     print(f'test #recs = {len(X_test)}')
 
+    return X_train, y_train, X_test, y_test
 def generator(image, label):
     return (image, label), (label, image)
 
-def generate_tf_data(X_train, y_train, X_test, y_test, batch_size):
-    dataset_train = datagen_mfcc(X_train, y_train, batch_size=16)
-    dataset_test = datagen_mfcc(X_test, y_test, batch_size=16)
+def generate_tf_data(target_names, data_dir, batch_size=16):
+    X_train,y_train,X_test,y_test=dataload(target_names=target_names, data_dir=data_dir)
+    dataset_train = datagen_mfcc(X_train, y_train, batch_size=16, target_names=target_names)
+    dataset_test = datagen_mfcc(X_test, y_test, batch_size=16, target_names=target_names)
     
     return dataset_train, dataset_test
 
+            # Convert sample weight
+from skimage.transform import resize
+
 def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28, duration=28):
-    """
-    Data generator for training models with MFCC features.
-
-    Args:
-        X_train: List of file paths to audio files.
-        y_train: List of labels corresponding to X_train.
-        batch_size: Number of samples per batch.
-        target_names: List of class names for one-hot encoding.
-        SR: Sampling rate for audio files.
-        n_mfcc: Number of MFCC coefficients to compute.
-        duration: Fixed duration (in seconds) for each audio clip.
-
-    Yields:
-        A tuple (x_batch, y_batch, sample_weight) for training.
-    """
-    
-    # Calculate class weights based on the frequency of the labels
-    class_weights = class_weight.compute_class_weight(
-        class_weight='balanced',
-        classes=np.unique(y_train),
-        y=y_train
-    )
-    class_weight_dict = dict(zip(np.unique(y_train), class_weights))
-    
     while True:
         # Shuffle data at the start of each epoch
         idx = np.arange(len(X_train))
@@ -140,12 +164,12 @@ def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28
                 mfcc = librosa.feature.mfcc(y=data, sr=rate, n_mfcc=n_mfcc)
                 mfcc = mfcc.T  # Transpose to have time-steps first
                 
-                x_batch.append(mfcc)
+                # Resize MFCC to change height from 876 to 28
+                mfcc_resized = resize(mfcc, (28, n_mfcc), mode='reflect')  # Resize to (28, n_mfcc)
+                
+                x_batch.append(mfcc_resized)
                 y_batch.append(labels_batch[i])
                 
-                # Assign sample weight based on class weight
-                sample_weight_batch.append(class_weight_dict[labels_batch[i]])
-            
             # Convert to numpy arrays
             x_batch = np.array(x_batch, dtype=np.float32)
             y_batch = np.array(y_batch, dtype=np.float32)
@@ -157,4 +181,5 @@ def datagen_mfcc(X_train, y_train, batch_size, target_names, SR=16000, n_mfcc=28
             # One-hot encode labels
             y_batch = to_categorical(y_batch, num_classes=len(target_names))
             
-            # Convert sample weight
+            # Yield the batch
+            yield x_batch, y_batch
