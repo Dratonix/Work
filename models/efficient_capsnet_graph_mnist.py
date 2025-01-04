@@ -23,23 +23,17 @@ def efficient_capsnet_graph(input_shape):
     digit_caps = FCCaps(10, 16)(x)
 
     # Length Layer
-    digit_caps_len = Length(name='length_capsnet_output')(digit_caps)
+    x = tf.keras.layers.Reshape((-1, 16))(digit_caps)  # Reshape to (batch_size, time_steps, feature_dim)
+    
+    # LSTM layer
+    x = tf.keras.layers.LSTM(64, return_sequences=False)(x)  # You can adjust the number of units (64 here)
+    
+    # Dense output layer for classification
+    x = tf.keras.layers.Dense(5, activation='softmax')(x)  # 5 classes (woodboring pests)
 
-    # LSTM Layer After Capsule Network
-    # First, reshape the capsule output (digit_caps) to fit LSTM input
-    x = tf.keras.layers.Reshape((-1, 10 * 16))(digit_caps)  # Assuming each capsule vector has length 16, and there are 10 classes
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(x)  # LSTM Layer 1
-    x = tf.keras.layers.BatchNormalization()(x)
-    
-    # You can add additional LSTM layers if necessary
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=False))(x)  # LSTM Layer 2 (final)
-    x = tf.keras.layers.BatchNormalization()(x)
-    
-    # Optional: You can add a final dense layer for classification or other tasks
-    # Example: Classification Layer (if needed)
-    outputs = tf.keras.layers.Dense(10, activation='softmax')(x)  # For 10-class classification
-    
-    return tf.keras.Model(inputs=inputs, outputs=[digit_caps_len, outputs], name='Efficient_CapsNet_LSTM')
+    return tf.keras.Model(inputs=inputs, outputs=x, name='Efficient_CapsNet_LSTM')
+
+
 
 def generator_graph(input_shape):
     """
